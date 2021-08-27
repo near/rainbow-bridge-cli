@@ -1,0 +1,70 @@
+---
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+name: Tests
+jobs:
+  test:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job-name: Linter
+            cmd: |
+              yarn
+              yarn standard
+              yarn prettier-solidity
+            timeout-minutes: 5
+
+          - job-name: E2E
+            cmd: ./testing/ci/e2e.sh
+            timeout-minutes: 40
+
+          - job-name: E2E myerc20
+            cmd: ./testing/ci/e2e_deploy_contract.sh
+            timeout-minutes: 40
+
+          - job-name: Challenge with watchdog
+            cmd: ./testing/ci/test_challenge.sh
+            timeout-minutes: 40
+
+          - job-name: Test eth-relay catchup
+            cmd: ./testing/ci/test_ethrelay_catchup.sh
+            timeout-minutes: 40
+
+    name: ${{ matrix.job-name }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v2
+
+      - name: Install nearup
+        run: |
+          pip3 install nearup --upgrade --user
+          echo "$(python3 -m site --user-base)/bin" >> $GITHUB_PATH
+
+      - name: Execute
+        run: ${{ matrix.cmd }}
+        timeout-minutes: ${{ matrix.timeout-minutes }}
+
+      - name: Collect logs
+        if: ${{ always() }}
+        run: |
+          mkdir logs_artifact
+          if [[ -d ~/.rainbow/logs ]]; then
+            cp -r ~/.rainbow/logs logs_artifact/rainbow-logs
+          fi
+          if [[ -f ~/.pm2/pm2.log ]]; then
+            cp ~/.pm2/pm2.log logs_artifact/pm2.log
+          fi
+
+      - name: Upload logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.job-name }} (logs)
+          path: logs_artifact

@@ -1,0 +1,52 @@
+---
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+name: Contracts (ETH)
+jobs:
+  test:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job-name: nearbridge test
+            cmd: |
+              cd contracts/eth/nearbridge
+              yarn
+              yarn test
+            timeout-minutes: 40
+
+          - job-name: nearprover test
+            cmd: |
+              cd contracts/eth/nearprover
+              yarn
+              yarn test
+            timeout-minutes: 40
+
+          - job-name: verify near headers
+            cmd: |
+              yarn
+              cd contracts/eth/
+              ci/test_verify_near_headers.sh
+            timeout-minutes: 40
+
+          - job-name: verify near proofs
+            cmd: |
+              yarn
+              cd contracts/eth/
+              ci/test_verify_near_proofs.sh
+            timeout-minutes: 40
+
+    name: ${{ matrix.job-name }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v2
+
+      - name: Execute
+        run: ${{ matrix.cmd }}
+        timeout-minutes: ${{ matrix.timeout-minutes }}

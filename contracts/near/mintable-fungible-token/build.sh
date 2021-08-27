@@ -11,6 +11,7 @@ else
 fi
 
 docker run \
+     --rm \
      --mount type=bind,source=$DIR/..,target=/host \
      --cap-add=SYS_PTRACE --security-opt seccomp=unconfined $userflag \
      -w /host/mintable-fungible-token \

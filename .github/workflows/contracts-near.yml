@@ -1,0 +1,38 @@
+---
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+name: Contracts (NEAR)
+jobs:
+  test:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job-name: build all rust contracts
+            cmd: |
+              cd contracts/near/eth-client
+              ./build.sh
+              cd ../eth-prover
+              ./build.sh
+              git status
+              changed_files=$(git status --porcelain --untracked-files=no | wc -l)
+              if [ $changed_files -gt 0 ]; then
+                echo 'contract changed, please rebuild contract'
+                exit 1
+              fi
+            timeout-minutes: 40
+
+    name: ${{ matrix.job-name }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v2
+
+      - name: Execute
+        run: ${{ matrix.cmd }}
+        timeout-minutes: ${{ matrix.timeout-minutes }}
